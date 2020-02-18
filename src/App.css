@@ -7,7 +7,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: white;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -18,5 +18,13 @@
 }
 
 .App-link {
-  color: #09d3ac;
+  color: #092ed3;
 }
+
+.SMBee_svg__pcb_board-fr4 {color:dimgrey;}
+.SMBee_svg__pcb_board-cu {color: lightgrey;}
+.SMBee_svg__pcb_board-cf {color: goldenrod;}
+.SMBee_svg__pcb_board-sm {color: black;opacity: 0.6;}
+.SMBee_svg__pcb_board-ss {color: white;}
+.SMBee_svg__pcb_board-sp {color: silver;}
+.SMBee_svg__pcb_board-out {color: black;}
