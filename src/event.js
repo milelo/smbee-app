@@ -52,11 +52,11 @@ function incTick(prevState) {
 }
 
 function showLeds(prevState, {ledBrightnessUpdate}) {
-  dbg('prevState', prevState['leds'])
-  dbg('ledBrightnessUpdate', ledBrightnessUpdate)
+  //dbg('prevState', prevState['leds'],'string')
+  //dbg('ledBrightnessUpdate', ledBrightnessUpdate, 'string')
   dispatch({f: 'nextStep'})
-  const newState = dbgx('newState', update(prevState, {leds: ledBrightnessUpdate}))
-  dbg('newState', newState['leds'])
+  const newState = update(prevState, {leds: ledBrightnessUpdate})
+  //dbg('newState', newState['leds'], 'string')
   return newState
 }
 
@@ -83,7 +83,7 @@ function nextStep(prevState) {
   const {engine, program} = prevState
   const {pc, running} = engine
   const step = program[pc]
-  dbg('nextStep...; running', running)
+  //dbg('nextStep...; running', running)
   if (running) {
     //execute step
     dispatch(step)

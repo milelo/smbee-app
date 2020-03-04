@@ -69,8 +69,7 @@ function SequenceView(props) {
   return <h1>Sequence View</h1>
 }
 
-//console.log(JSON.stringify(program))
-console.log(program)
+//console.log(program)
 
 const getInitialState = () => Object.assign(initialState, {program: program})
 
