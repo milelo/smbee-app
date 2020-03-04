@@ -1,4 +1,12 @@
 import update from 'immutability-helper'; //https://github.com/kolodny/immutability-helper
+import './program'
+import util from './util'
+
+// eslint-disable-next-line
+const dbg = util.dbg
+// eslint-disable-next-line
+const dbgx = util.dbgx
+
 //import engine, { FLASH_SLOW } from './engine'
 
 //const engine = new engine();
@@ -17,49 +25,6 @@ const setMenu = (prevState, { open }) =>
 const setView = (prevState, { view }) =>
   update(setMenu(prevState, { open: false }), { view: { $set: view } })
 
-const setLed = (prevState, { ledId, brightness, enable }) =>
-  update(prevState, {
-    leds: {
-      [ledId]: {
-        brightness: { $set: brightness },
-        enable: { $set: enable }
-      }
-    }
-  })
-
-const toggleLed = (prevState, { ledId }) =>
-  update(prevState, { leds: { [ledId]: { enable: { $apply: e => e = !e } } } })
-
-// eslint-disable-next-line
-function debug(m, r) {
-  console.log(m ? m + ": " + r : r)
-  return r
-}
-
-let timerID
-const startFlashing = (prevState, { toggle }) => {
-  timerID = prevState.flashing ? timerID : setInterval(toggle, 1000)
-  return update(prevState, { flashing: { $set: true } })
-}
-
-const stopFlashing = (prevState) => {
-  clearInterval(timerID)
-  return update(prevState, { flashing: { $set: false } })
-}
-
-const tickInterval_ms = 4
-
-let runningTimerHandle
-function toggleRunning(prevState, { dispatch }) {
-  const wasRunning = prevState.running
-  if (wasRunning) {
-    clearInterval(runningTimerHandle)
-  } else {
-    runningTimerHandle = setInterval(() => dispatch({ f: 'incTick' }), tickInterval_ms)
-  }
-  return update(prevState, { running: { $set: !wasRunning } })
-}
-
 const flashShift = {
   fast: 0,
   medium: 1,
@@ -69,10 +34,10 @@ const flashShift = {
 }
 
 function ledBrightness(prevState, ledId) {
-  const { ticks, leds } = prevState
+  const { engine, leds } = prevState
   const { flashRate, antiPhase, brightness } = leds[ledId]
   const shift = flashShift[flashRate]
-  return shift != null ? WAVEFORM[((ticks >> shift) & 0xF) + (antiPhase ? 0x8 : 0)] : brightness
+  return shift != null ? WAVEFORM[((engine.ticks >>> shift) & 0xF) + (antiPhase ? 0x8 : 0)] : brightness
 }
 
 function updateLedBrightness(prevState) {
@@ -82,8 +47,49 @@ function updateLedBrightness(prevState) {
 }
 
 function incTick(prevState) {
-  const state = update(prevState, { ticks: { $apply: x => x + 1 } })
+  const state = update(prevState, {engine: { ticks: { $apply: x => x + 1 } }})
   return updateLedBrightness(state)
+}
+
+function showLeds(prevState, {ledBrightnessUpdate}) {
+  dbg('prevState', prevState['leds'])
+  dbg('ledBrightnessUpdate', ledBrightnessUpdate)
+  dispatch({f: 'nextStep'})
+  const newState = dbgx('newState', update(prevState, {leds: ledBrightnessUpdate}))
+  dbg('newState', newState['leds'])
+  return newState
+}
+
+function wait(prevState, {timems}) {
+  dispatch({f: 'nextStep'}, timems)
+  return prevState
+}
+
+const tickInterval_ms = 4
+
+let runningTimerHandle
+function toggleRunning(prevState) {
+  const wasRunning = prevState.engine.running
+  if (wasRunning) {
+    clearInterval(runningTimerHandle)
+  } else {
+    runningTimerHandle = setInterval(() => dispatch({ f: 'incTick' }), tickInterval_ms)
+     dispatch({f: 'nextStep'})
+  }
+  return update(prevState, {engine: { running: { $set: !wasRunning } }})
+}
+
+function nextStep(prevState) {
+  const {engine, program} = prevState
+  const {pc, running} = engine
+  const step = program[pc]
+  dbg('nextStep...; running', running)
+  if (running) {
+    //execute step
+    dispatch(step)
+  }
+  const pcNew = running? pc + 1: 0
+  return update(prevState, {engine: {pc: {$set: pcNew === program.length? 0: pcNew}}})
 }
 
 event.reducer = function (prevState, action) {
@@ -92,12 +98,11 @@ event.reducer = function (prevState, action) {
   const f = {
     setView: setView,
     setMenu: setMenu,
-    startFlashing: startFlashing,
-    stopFlashing: stopFlashing,
-    setLed: setLed,
-    toggleLed: toggleLed,
     toggleRunning: toggleRunning,
     incTick: incTick,
+    nextStep: nextStep,
+    showLeds: showLeds,
+    wait: wait,
   }[action.f]
   if (f) {
     return f(prevState, action)
@@ -106,67 +111,20 @@ event.reducer = function (prevState, action) {
   }
 }
 
-event.getDispatcher = function (dispatch) {
+let dispatch //dispatch function
+
+event.getDispatcher = function (rdispatch) {
+  //always dispatch from timeout to avoid dispatch before return
+  dispatch = (data, delayms = 0) => setTimeout(() => rdispatch(data),delayms)
   return {
-    homeView: () => dispatch({ f: 'setView', view: 'home' }),
-    sequenceView: () => dispatch({ f: 'setView', view: 'sequence' }),
+    homeView: () => rdispatch({ f: 'setView', view: 'home' }),
+    sequenceView: () => rdispatch({ f: 'setView', view: 'sequence' }),
 
-    openMenu: () => dispatch({ f: 'setMenu', open: true }),
-    closeMenu: () => dispatch({ f: 'setMenu', open: false }),
+    openMenu: () => rdispatch({ f: 'setMenu', open: true }),
+    closeMenu: () => rdispatch({ f: 'setMenu', open: false }),
 
-    startFlashing: () => dispatch(
-      { f: 'startFlashing', toggle: () => dispatch({ f: 'toggleLed', ledId: 'sting' }) }),
-    stopFlashing: () => dispatch({ f: 'stopFlashing' }),
-    ledOn: (ledId) => dispatch({ f: 'setLed', ledId: ledId, enable: true, brightness: 100 }),
-    ledOff: (ledId) => dispatch({ f: 'setLed', ledId: ledId, enable: false }),
-    ledBrightness: (ledId, brightness) => dispatch({ f: 'setLed', ledId: ledId, brightness: brightness, enable: true }),
-    toggleLed: (ledId) => dispatch({ f: 'toggleLed', ledId: ledId }),
-    toggleRunning: () => dispatch({ f: 'toggleRunning', dispatch: dispatch }),
+    ledBrightness: (ledId, brightness) => rdispatch({ f: 'setLed', ledId: ledId, brightness: brightness, enable: true }),
+    toggleRunning: () => rdispatch({ f: 'toggleRunning' }),
   }
 }
 
-event.initialState =
-{
-  leds: {
-    rightEye: {
-      color: "yellow",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
-    },
-    leftEye: {
-      color: "yellow",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
-    },
-    rightAntennae: {
-      color: "blue",
-      enable: true,
-      flashRate: 'vSlow',
-      antiPhase: true,
-      brightness: 100,
-    },
-    leftAntennae: {
-      color: "blue",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
-    },
-    sting: {
-      color: "red",
-      enable: true,
-      flashRate: 'medium',
-      brightness: 100,
-    }
-  },
-  ledIds: ['leftEye', 'rightEye', 'leftAntennae', 'rightAntennae', 'sting'],
-  menuPane: {
-    open: false
-  },
-  view: 'home',
-  running: false,
-  flashing: false,
-  //program: [{ f: engine.EYES }, {}],
-  ticks: 0,
-}

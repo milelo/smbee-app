@@ -3,6 +3,7 @@ import React, { /*useEffect,*/ useReducer } from 'react';
 //import Dispatcher from './event'
 import event from './event'
 import './App.css';
+import {program} from './program';
 //import Container from '@material-ui/core/Container';
 import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -17,7 +18,7 @@ import SvgSmBee from './svg-bee'
 const theme = createMuiTheme();
 
 function App() {
-  const [state, dispatch] = useReducer(event.reducer, event.initialState);
+  const [state, dispatch] = useReducer(event.reducer, getInitialState());
   const dispatcher = event.getDispatcher(dispatch)
   const context = {
     dispatch: dispatch,
@@ -31,7 +32,7 @@ function App() {
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <AppBar title="SMBee" running={state.running} {...context} />
+      <AppBar title="SMBee" running={state.engine.running} {...context} />
       <MenuPane {...state.menuPane} {...context} >
         <MainMenu {...context} />
       </MenuPane>
@@ -66,6 +67,57 @@ function MainView({ leds }) {
 
 function SequenceView(props) {
   return <h1>Sequence View</h1>
+}
+
+//console.log(JSON.stringify(program))
+console.log(program)
+
+const getInitialState = () => Object.assign(initialState, {program: program})
+
+const initialState = {
+  leds: {
+    rightEye: {
+      color: "yellow",
+      enable: true,
+      flashRate: 'vSlow',
+      brightness: 100,
+    },
+    leftEye: {
+      color: "yellow",
+      enable: true,
+      flashRate: 'vSlow',
+      brightness: 100,
+    },
+    rightAntennae: {
+      color: "blue",
+      enable: true,
+      flashRate: 'vSlow',
+      antiPhase: true,
+      brightness: 100,
+    },
+    leftAntennae: {
+      color: "blue",
+      enable: true,
+      flashRate: 'vSlow',
+      brightness: 100,
+    },
+    sting: {
+      color: "red",
+      enable: true,
+      flashRate: 'medium',
+      brightness: 100,
+    }
+  },
+  ledIds: ['leftEye', 'rightEye', 'leftAntennae', 'rightAntennae', 'sting'],
+  menuPane: {
+    open: false
+  },
+  view: 'home',
+  engine: {
+    running: false,
+    ticks: 0,
+    pc: 0,
+  }
 }
 
 export default App;

@@ -2,7 +2,7 @@ import React from "react";
 
 const ledBackgroundFill = 'LightGrey'
 
-function LedStyle({color, brightness, enable}) {
+function LedStyle({color, brightness = 0, enable = true}) {
   return {fill: color, fillOpacity: enable? brightness/100 -1 : 0};
 }
 
