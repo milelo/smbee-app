@@ -18,7 +18,7 @@ import SvgSmBee from './svg-bee'
 const theme = createMuiTheme();
 
 function App() {
-  const [state, dispatch] = useReducer(event.reducer, getInitialState());
+  const [state, dispatch] = useReducer(event.reducer, initialState);
   const dispatcher = event.getDispatcher(dispatch)
   const context = {
     dispatch: dispatch,
@@ -69,42 +69,22 @@ function SequenceView(props) {
   return <h1>Sequence View</h1>
 }
 
-//console.log(program)
-
-const getInitialState = () => Object.assign(initialState, {program: program})
-
 const initialState = {
   leds: {
     rightEye: {
       color: "yellow",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
     },
     leftEye: {
       color: "yellow",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
     },
     rightAntennae: {
       color: "blue",
-      enable: true,
-      flashRate: 'vSlow',
-      antiPhase: true,
-      brightness: 100,
     },
     leftAntennae: {
       color: "blue",
-      enable: true,
-      flashRate: 'vSlow',
-      brightness: 100,
     },
     sting: {
       color: "red",
-      enable: true,
-      flashRate: 'medium',
-      brightness: 100,
     }
   },
   ledIds: ['leftEye', 'rightEye', 'leftAntennae', 'rightAntennae', 'sting'],
@@ -116,7 +96,8 @@ const initialState = {
     running: false,
     ticks: 0,
     pc: 0,
-  }
+  },
+  program: program
 }
 
 export default App;

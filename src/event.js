@@ -3,19 +3,16 @@ import './program'
 import util from './util'
 
 // eslint-disable-next-line
-const dbg = util.dbg
+const dbg = util.debug('event')
 // eslint-disable-next-line
-const dbgx = util.dbgx
+const dbgx = util.debugx
 
-//import engine, { FLASH_SLOW } from './engine'
-
-//const engine = new engine();
 //define event as the namespace
 let event = {}
 export default event
 
 const WAVEFORM = new Uint8Array(
-//  [0, 32, 64, 96, 128, 160, 192, 224, 255, 224, 192, 160, 128, 96, 64, 32],//triangle
+  //  [0, 32, 64, 96, 128, 160, 192, 224, 255, 224, 192, 160, 128, 96, 64, 32],//triangle
   [0, 50, 98, 142, 180, 212, 236, 250, 255, 250, 236, 212, 180, 142, 98, 50],// rectified sine
 )
 
@@ -47,21 +44,21 @@ function updateLedBrightness(prevState) {
 }
 
 function incTick(prevState) {
-  const state = update(prevState, {engine: { ticks: { $apply: x => x + 1 } }})
+  const state = update(prevState, { engine: { ticks: { $apply: x => x + 1 } } })
   return updateLedBrightness(state)
 }
 
-function showLeds(prevState, {ledBrightnessUpdate}) {
+function showLeds(prevState, { ledBrightnessUpdate }) {
   //dbg('prevState', prevState['leds'],'string')
   //dbg('ledBrightnessUpdate', ledBrightnessUpdate, 'string')
-  dispatch({f: 'nextStep'})
-  const newState = update(prevState, {leds: ledBrightnessUpdate})
+  dispatchAsync({ f: 'nextStep' })
+  const newState = update(prevState, { leds: ledBrightnessUpdate })
   //dbg('newState', newState['leds'], 'string')
   return newState
 }
 
-function wait(prevState, {timems}) {
-  dispatch({f: 'nextStep'}, timems)
+function wait(prevState, { timems }) {
+  dispatchAsync({ f: 'nextStep' }, timems)
   return prevState
 }
 
@@ -74,22 +71,22 @@ function toggleRunning(prevState) {
     clearInterval(runningTimerHandle)
   } else {
     runningTimerHandle = setInterval(() => dispatch({ f: 'incTick' }), tickInterval_ms)
-     dispatch({f: 'nextStep'})
+    dispatchAsync({ f: 'nextStep' })
   }
-  return update(prevState, {engine: { running: { $set: !wasRunning } }})
+  return update(prevState, { engine: { running: { $set: !wasRunning } } })
 }
 
 function nextStep(prevState) {
-  const {engine, program} = prevState
-  const {pc, running} = engine
+  const { engine, program } = prevState
+  const { pc, running } = engine
   const step = program[pc]
   //dbg('nextStep...; running', running)
   if (running) {
     //execute step
-    dispatch(step)
+    dispatchAsync(step)
   }
-  const pcNew = running? pc + 1: 0
-  return update(prevState, {engine: {pc: {$set: pcNew === program.length? 0: pcNew}}})
+  const pcNew = running ? pc + 1 : 0
+  return update(prevState, { engine: { pc: { $set: pcNew === program.length ? 0 : pcNew } } })
 }
 
 event.reducer = function (prevState, action) {
@@ -111,20 +108,28 @@ event.reducer = function (prevState, action) {
   }
 }
 
-let dispatch //dispatch function
+let dispatchAsync //Local dispatch function. Support dispatch from timeout to avoid dispatch before return
+let dispatch //Local dispatch function
 
-event.getDispatcher = function (rdispatch) {
-  //always dispatch from timeout to avoid dispatch before return
-  dispatch = (data, delayms = 0) => setTimeout(() => rdispatch(data),delayms)
+//let dispatcherAsync 
+
+event.getDispatcher = function (dispatch1) {
+  dispatch = dispatch1
+  dispatchAsync = (data, delayms = 0) => setTimeout(() => dispatch(data), delayms)
+  // dispatcherAsync = {
+  //   nextStep: () => dispatchAsync({ f: 'nextStep' }),
+  //   incTick: () => dispatchAsync({ f: 'incTick' })
+  // }
   return {
-    homeView: () => rdispatch({ f: 'setView', view: 'home' }),
-    sequenceView: () => rdispatch({ f: 'setView', view: 'sequence' }),
+    homeView: () => dispatch({ f: 'setView', view: 'home' }),
+    sequenceView: () => dispatch({ f: 'setView', view: 'sequence' }),
 
-    openMenu: () => rdispatch({ f: 'setMenu', open: true }),
-    closeMenu: () => rdispatch({ f: 'setMenu', open: false }),
+    openMenu: () => dispatch({ f: 'setMenu', open: true }),
+    closeMenu: () => dispatch({ f: 'setMenu', open: false }),
 
-    ledBrightness: (ledId, brightness) => rdispatch({ f: 'setLed', ledId: ledId, brightness: brightness, enable: true }),
-    toggleRunning: () => rdispatch({ f: 'toggleRunning' }),
+    ledBrightness: (ledId, brightness) => dispatch({ f: 'setLed', ledId: ledId, brightness: brightness, enable: true }),
+    toggleRunning: () => dispatch({ f: 'toggleRunning' }),
+    dispatch: dispatch
   }
 }
 

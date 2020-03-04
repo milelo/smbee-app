@@ -1,18 +1,23 @@
 let util = {}
 export default util
 
-// eslint-disable-next-line
-util.dbg = function (m, r, decode = 'default') {
-  const decoder = {
-    default: x => x, 
-    string: JSON.stringify, 
-    bin: x => '0b'+ x.toString(2)
-  }[decode]
-  console.log((m ? m + ": " : "") + decoder(r)+'\n\n')
-  return r
+/**
+ * Create a debug function given package name
+ */
+util.debug = pname => function (message, value, renderAs = 'default') {
+  const render = {
+    default: v => v,
+    string: JSON.stringify,
+    bin: v => '0b' + v.toString(2),
+    hex: v => '0x' + v.toString(16)
+  }[renderAs]
+  console.log(pname + '.' + (message ? message + ": " : "") + render(value) + '\n\n')
+  return value
 }
 
-// eslint-disable-next-line
-util.dbgx = function (m, r) {
+/**
+ * A dummy debug function
+ */
+util.debugx = function (m, r) {
   return r
 }
